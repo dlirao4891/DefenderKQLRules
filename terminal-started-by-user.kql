@@ -1,0 +1,15 @@
+// Set the process to look for
+let SusTerminal = (DeviceProcessEvents
+| where ActionType == "ProcessCreated"
+| where FileName == "powershell.exe" or FileName == "terminal.exe" or FileName == "cmd.exe" or FileName == "WindowsTerminal.exe"
+| where InitiatingProcessParentFileName == @"userinit.exe"
+// Set exclusions
+| where ProcessCommandLine !contains @"OneDrive"
+| where AccountDomain != @"nt-hallinta");
+// Define known users and computers, that need the tools 
+let KnownUsers = dynamic(["user", "names", "goes", "here"]);
+let KnownComputers = dynamic(["machine", "names", "goes", "here"]);
+SusTerminal
+| where InitiatingProcessAccountName !in (KnownUsers)
+| where DeviceName !in (KnownComputers)
+| where Timestamp > ago(1d)
