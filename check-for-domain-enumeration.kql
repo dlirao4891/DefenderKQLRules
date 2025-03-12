@@ -9,6 +9,9 @@ let PowerShellCommand = (DeviceEvents
 );
 let NetCommand = (DeviceProcessEvents 
 | where FileName == "net.exe" and AccountName != "" and ProcessCommandLine !contains '\\'  and ProcessCommandLine !contains '/add' and AccountName != "system"
-| where (ProcessCommandLine contains ' user ' or ProcessCommandLine contains ' group ') and (ProcessCommandLine contains ' /do' or ProcessCommandLine contains ' /domain'));
+| where ProcessCommandLine has_any (EnumCommands));
 PowerShellCommand
 | union NetCommand
+| extend PS_Commands = extractjson("$.Command", AdditionalFields, typeof(string))
+| extend NET_Target = extract("(?i)[user|group] (\"*[a-zA-Z0-9-_ ]+\"*)", 1, ProcessCommandLine)
+| project AccountName, InitiatingProcessAccountUpn, NET_Target, PS_Commands, ProcessCommandLine, Timestamp
