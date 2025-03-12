@@ -1,0 +1,14 @@
+// set commands to look for
+let EnumCommands = dynamic(["/do","/domain","group","user","Domain Controllers","Domain Admins","Administrator","accounts","Import-Module","Get-ADUser","Get-ADGroup","Get-ADDomain"]);
+let PowerShellCommand = (DeviceEvents
+| where ActionType == "PowerShellCommand"
+| where AdditionalFields  has_any (EnumCommands)
+// Excluded the system accounts
+| where InitiatingProcessAccountName != @"system"
+| where InitiatingProcessAccountDomain != @"nt-hallinta"
+);
+let NetCommand = (DeviceProcessEvents 
+| where FileName == "net.exe" and AccountName != "" and ProcessCommandLine !contains '\\'  and ProcessCommandLine !contains '/add' and AccountName != "system"
+| where (ProcessCommandLine contains ' user ' or ProcessCommandLine contains ' group ') and (ProcessCommandLine contains ' /do' or ProcessCommandLine contains ' /domain'));
+PowerShellCommand
+| union NetCommand
