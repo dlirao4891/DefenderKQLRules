@@ -1,18 +1,30 @@
-// set commands to look for
+// Set commands to look for
 let Commands = dynamic(["net.exe", "nltest.exe"]);
 let EnumCommands = dynamic(["/do","/domain","group","user","Domain Controllers","Domain Admins","Administrator","accounts","Import-Module","Get-ADUser","Get-ADGroup","Get-ADDomain", "/dclist:"]);
+// PowerShell commands
 let PowerShellCommand = (DeviceEvents
 | where ActionType == "PowerShellCommand"
-| where AdditionalFields  has_any (EnumCommands)
-// Excluded the system accounts
-| where InitiatingProcessAccountName != @"system"
-| where InitiatingProcessAccountDomain != @"nt-hallinta"
-);
-let cmdCommand = (DeviceProcessEvents 
-| where FileName has_any (Commands) and AccountName != "" and ProcessCommandLine !contains '\\'  and ProcessCommandLine !contains '/add' and AccountName != "system"
-| where ProcessCommandLine has_any (EnumCommands));
+    and AdditionalFields  has_any (EnumCommands)
+    // Exclude system accounts
+    and InitiatingProcessAccountName != @"system"
+    and InitiatingProcessAccountDomain != @"nt-hallinta");
+// Net commands
+let NetCommand = (DeviceProcessEvents 
+| where FileName has_any (Commands)
+    and AccountName != ""
+    and ProcessCommandLine !contains '\\'
+    and ProcessCommandLine !contains '/add'
+    and AccountName != "system"
+    and ProcessCommandLine has_any (EnumCommands));
+// Whoami command
+let whoami = (DeviceProcessEvents
+| where FileName == "whoami.exe"
+    and ActionType == "ProcessCreated"
+    // Exclude process that use "whoami"
+    and InitiatingProcessFileName != "[Some real genuine service goes here]");
+// Combine results
 PowerShellCommand
-| union cmdCommand
+| union NetCommand, whoami
 | extend PS_Commands = extractjson("$.Command", AdditionalFields, typeof(string))
 | extend NET_Target = extract("(?i)[user|group] (\"*[a-zA-Z0-9-_ ]+\"*)", 1, ProcessCommandLine)
-| project AccountName, InitiatingProcessAccountUpn, NET_Target, PS_Commands, ProcessCommandLine, Timestamp
+| project AccountName, InitiatingProcessAccountUpn, NET_Target, PS_Commands, ProcessCommandLine, InitiatingProcessFileName, Timestamp
