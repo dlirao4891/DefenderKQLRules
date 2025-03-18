@@ -1,5 +1,7 @@
 # DefenderKQLRules
 
 
-I have been using those for detection on DefenderXDR.
-Those rules are not complete nor perfect, meaning feel free to suggest changes or to make it better. :)
+I've been using these KQL rules for detection in Microsoft Defender XDR.
+These rules aren't perfect or complete, so feel free to suggest changes or improvements!
+
+I'm uploading the ones I've tested and found to be working.
